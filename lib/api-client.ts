@@ -4,16 +4,16 @@
  */
 
 import type { Route } from '@/app/kuala-lumpur/data'
-import type { RouteWithLocations } from './prisma-db'
+import type { RouteWithLocations } from './supabase-db'
 
 /**
- * Convert Prisma route format to app route format
+ * Convert database route format to app route format
  */
-function convertPrismaRouteToAppRoute(prismaRoute: RouteWithLocations): Route {
+function convertDatabaseRouteToAppRoute(dbRoute: RouteWithLocations): Route {
   // Determine delivery mode based on delivery schedule
   const getDeliveryMode = (schedules: any[]) => {
     if (!schedules || schedules.length === 0) return 'Daily'
-    const days = schedules.map(s => s.dayOfWeek)
+    const days = schedules.map(s => s.dayOfWeek || s.day_of_week)
     if (days.length === 7) return 'Daily'
     if (days.length === 5 && !days.includes(0) && !days.includes(6)) return 'Weekday'
     if (days.length === 2 && days.includes(0) && days.includes(6)) return 'Weekend'
@@ -21,22 +21,22 @@ function convertPrismaRouteToAppRoute(prismaRoute: RouteWithLocations): Route {
   }
 
   // Ensure date is a Date object (API returns strings)
-  const lastUpdateTime = typeof prismaRoute.updatedAt === 'string' 
-    ? new Date(prismaRoute.updatedAt) 
-    : prismaRoute.updatedAt
+  const lastUpdateTime = typeof dbRoute.updated_at === 'string' 
+    ? new Date(dbRoute.updated_at) 
+    : dbRoute.updated_at || new Date()
 
   return {
-    id: prismaRoute.id,
-    code: prismaRoute.code,
-    location: prismaRoute.name, // Map Prisma 'name' to app 'location'
+    id: dbRoute.id,
+    code: dbRoute.code,
+    location: dbRoute.name, // Map database 'name' to app 'location'
     delivery: 'Daily', // Default delivery for the route
     shift: 'AM', // Default shift
     lastUpdateTime: lastUpdateTime,
-    locations: prismaRoute.locations.map((loc, index) => ({
+    locations: dbRoute.locations.map((loc, index) => ({
       id: loc.id,
       no: index + 1,
       code: loc.code,
-      location: loc.name, // Map Prisma 'name' to app 'location'
+      location: loc.name, // Map database 'name' to app 'location'
       delivery: getDeliveryMode(loc.deliverySchedule || []),
       lat: loc.address || '', // Temporarily use address field for lat
       lng: loc.contact || '', // Temporarily use contact field for lng
@@ -61,8 +61,8 @@ export async function loadRoutesFromAPI(region: string): Promise<Route[]> {
       throw new Error(`Failed to fetch routes: ${response.statusText}`)
     }
 
-    const prismaRoutes: RouteWithLocations[] = await response.json()
-    return prismaRoutes.map(convertPrismaRouteToAppRoute)
+    const dbRoutes: RouteWithLocations[] = await response.json()
+    return dbRoutes.map(convertDatabaseRouteToAppRoute)
   } catch (error) {
     console.error('Error loading routes from API:', error)
     throw error

@@ -5,7 +5,7 @@ import {
   deleteGalleryImage,
   bulkCreateGalleryImages,
   reorderGalleryImages 
-} from '@/lib/prisma-db'
+} from '@/lib/supabase-db'
 
 /**
  * POST /api/gallery/images
@@ -14,7 +14,7 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { rowId, url, title, subtitle, position, active, bulk, images } = body
+    const { rowId, url, alt, position, bulk, images } = body
 
     // Handle bulk creation
     if (bulk && images && Array.isArray(images)) {
@@ -29,20 +29,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle single creation
-    if (!rowId || !url || !title) {
+    if (!rowId || !url) {
       return NextResponse.json(
-        { error: 'RowId, url, and title are required' },
+        { error: 'RowId and url are required' },
         { status: 400 }
       )
     }
 
     const image = await createGalleryImage({
-      rowId,
+      row_id: rowId, // Convert camelCase to snake_case
       url,
-      title,
-      subtitle,
+      alt,
       position,
-      active,
     })
 
     return NextResponse.json(image, { status: 201 })

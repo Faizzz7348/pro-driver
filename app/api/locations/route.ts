@@ -4,7 +4,7 @@ import {
   updateLocation, 
   deleteLocation,
   bulkCreateLocations 
-} from '@/lib/prisma-db'
+} from '@/lib/supabase-db'
 
 /**
  * POST /api/locations
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     console.log('Creating location with data:', { routeId, code, name, address, contact, notes, position, active })
 
     const location = await createLocation({
-      routeId,
+      route_id: routeId, // Convert camelCase to snake_case for Supabase
       code,
       name,
       address: address || undefined,
@@ -80,10 +80,10 @@ export async function PATCH(request: NextRequest) {
   } catch (error: any) {
     console.error('Error in PATCH /api/locations:', error)
     
-    // Handle record not found error
-    if (error?.code === 'P2025') {
+    // Handle record not found error (Supabase returns null or throws error)
+    if (error?.message?.includes('not found') || error?.code === 'PGRST116') {
       return NextResponse.json(
-        { error: 'Location not found', id: error?.meta?.cause },
+        { error: 'Location not found' },
         { status: 404 }
       )
     }

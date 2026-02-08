@@ -4,7 +4,7 @@ import {
   createRoute, 
   updateRoute, 
   deleteRoute 
-} from '@/lib/prisma-db'
+} from '@/lib/supabase-db'
 
 /**
  * GET /api/routes?region=selangor

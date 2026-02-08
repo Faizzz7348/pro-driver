@@ -1,18 +1,23 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { supabase } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    // Test database connection
-    await prisma.$queryRaw`SELECT 1`
+    // Test database connection by querying routes table
+    const { data, error } = await supabase
+      .from('routes')
+      .select('count')
+      .limit(1)
+    
+    if (error) throw error
     
     return NextResponse.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
       database: 'connected',
       env: {
-        hasDatabaseUrl: !!process.env.DATABASE_URL,
-        hasPostgresUrl: !!process.env.DATABASE_POSTGRES_URL,
+        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         nodeEnv: process.env.NODE_ENV,
       }
     })
@@ -24,8 +29,8 @@ export async function GET() {
       database: 'disconnected',
       error: error?.message || String(error),
       env: {
-        hasDatabaseUrl: !!process.env.DATABASE_URL,
-        hasPostgresUrl: !!process.env.DATABASE_POSTGRES_URL,
+        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         nodeEnv: process.env.NODE_ENV,
       }
     }, { status: 500 })

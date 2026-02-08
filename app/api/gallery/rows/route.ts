@@ -5,7 +5,7 @@ import {
   updateGalleryRow, 
   deleteGalleryRow,
   reorderGalleryRows 
-} from '@/lib/prisma-db'
+} from '@/lib/supabase-db'
 
 /**
  * GET /api/gallery/rows

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { supabase } from '@/lib/supabase'
 
 export async function GET() {
   const startTime = Date.now()
@@ -7,71 +7,75 @@ export async function GET() {
   try {
     // Test 1: Check environment variables
     const envCheck = {
-      DATABASE_URL: !!process.env.DATABASE_URL ? '✓ Set' : '✗ Missing',
-      PRISMA_DATABASE_URL: !!process.env.PRISMA_DATABASE_URL ? '✓ Set' : '✗ Missing',
-      DATABASE_POSTGRES_URL: !!process.env.DATABASE_POSTGRES_URL ? '✓ Set' : '✗ Missing',
+      NEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL ? '✓ Set' : '✗ Missing',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✓ Set' : '✗ Missing',
       NODE_ENV: process.env.NODE_ENV,
     }
 
-    // Test 2: Try to connect with PRISMA_DATABASE_URL (Accelerate)
-    let accelerateTest = { status: 'not tested', error: null }
-    if (process.env.PRISMA_DATABASE_URL) {
-      try {
-        const prismaAccelerate = new PrismaClient({
-          datasources: {
-            db: {
-              url: process.env.PRISMA_DATABASE_URL,
-            },
-          },
-        })
-        await prismaAccelerate.$queryRaw`SELECT 1 as test`
-        await prismaAccelerate.$disconnect()
-        accelerateTest.status = '✓ Connected'
-      } catch (error: any) {
-        accelerateTest = {
-          status: '✗ Failed',
-          error: error?.message || String(error)
-        }
+    // Test 2: Try to query routes table
+    let routesTest = { status: 'not tested', error: null, count: 0 }
+    try {
+      const { data, error, count } = await supabase
+        .from('routes')
+        .select('*', { count: 'exact', head: false })
+        .limit(1)
+      
+      if (error) throw error
+      
+      routesTest = {
+        status: '✓ Connected',
+        error: null,
+        count: count || 0
+      }
+    } catch (error: any) {
+      routesTest = {
+        status: '✗ Failed',
+        error: error?.message || String(error),
+        count: 0
       }
     }
 
-    // Test 3: Try to connect with DATABASE_URL (Direct)
-    let directTest = { status: 'not tested', error: null }
-    if (process.env.DATABASE_URL) {
-      try {
-        const prismaDirect = new PrismaClient({
-          datasources: {
-            db: {
-              url: process.env.DATABASE_URL,
-            },
-          },
-        })
-        await prismaDirect.$queryRaw`SELECT 1 as test`
-        await prismaDirect.$disconnect()
-        directTest.status = '✓ Connected'
-      } catch (error: any) {
-        directTest = {
-          status: '✗ Failed',
-          error: error?.message || String(error)
-        }
+    // Test 3: Try to query locations table
+    let locationsTest = { status: 'not tested', error: null, count: 0 }
+    try {
+      const { data, error, count } = await supabase
+        .from('locations')
+        .select('*', { count: 'exact', head: false })
+        .limit(1)
+      
+      if (error) throw error
+      
+      locationsTest = {
+        status: '✓ Connected',
+        error: null,
+        count: count || 0
+      }
+    } catch (error: any) {
+      locationsTest = {
+        status: '✗ Failed',
+        error: error?.message || String(error),
+        count: 0
       }
     }
 
     const elapsed = Date.now() - startTime
 
+    const errorString = typeof routesTest.error === 'string' ? routesTest.error : ''
+    const isTableMissingError = errorString.includes('relation') || errorString.includes('does not exist')
+    
     return NextResponse.json({
       timestamp: new Date().toISOString(),
       elapsed: `${elapsed}ms`,
       environment: envCheck,
       tests: {
-        prismaAccelerate: accelerateTest,
-        directConnection: directTest,
+        routesTable: routesTest,
+        locationsTable: locationsTest,
       },
-      recommendation: accelerateTest.status === '✓ Connected' 
-        ? 'Use PRISMA_DATABASE_URL (Prisma Accelerate)' 
-        : directTest.status === '✓ Connected'
-        ? 'Use DATABASE_URL (Direct Connection with pooling)'
-        : 'Both connections failed - check database credentials'
+      recommendation: routesTest.status === '✓ Connected' 
+        ? 'Supabase connection working! All tables accessible.' 
+        : isTableMissingError
+        ? 'Tables not created yet. Run the SQL from supabase-schema.sql in Supabase SQL Editor.'
+        : 'Connection failed - check environment variables'
     })
   } catch (error: any) {
     return NextResponse.json({
