@@ -40,14 +40,23 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log('POST /api/routes - Received body:', JSON.stringify(body, null, 2))
+    
     const { code, name, description, region, active } = body
 
     if (!code || !name || !region) {
+      console.error('Missing required fields:', { code, name, region })
       return NextResponse.json(
-        { error: 'Code, name, and region are required' },
+        { 
+          error: 'Code, name, and region are required',
+          received: { code, name, region },
+          fullBody: body
+        },
         { status: 400 }
       )
     }
+
+    console.log('Creating route with data:', { code, name, description, region, active })
 
     const route = await createRoute({
       code,
@@ -57,11 +66,18 @@ export async function POST(request: NextRequest) {
       active,
     })
 
+    console.log('Route created successfully:', route.id)
     return NextResponse.json(route, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in POST /api/routes:', error)
+    console.error('Error stack:', error?.stack)
     return NextResponse.json(
-      { error: 'Failed to create route' },
+      { 
+        error: 'Failed to create route',
+        details: error?.message || String(error),
+        code: error?.code,
+        meta: error?.meta
+      },
       { status: 500 }
     )
   }

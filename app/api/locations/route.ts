@@ -13,14 +13,23 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log('POST /api/locations - Received body:', JSON.stringify(body, null, 2))
+    
     const { routeId, code, name, address, contact, notes, position, active } = body
 
     if (!routeId || !code || !name) {
+      console.error('Missing required fields:', { routeId, code, name })
       return NextResponse.json(
-        { error: 'RouteId, code, and name are required', received: { routeId, code, name } },
+        { 
+          error: 'RouteId, code, and name are required', 
+          received: { routeId, code, name },
+          fullBody: body 
+        },
         { status: 400 }
       )
     }
+
+    console.log('Creating location with data:', { routeId, code, name, address, contact, notes, position, active })
 
     const location = await createLocation({
       routeId,
@@ -33,11 +42,18 @@ export async function POST(request: NextRequest) {
       active: active ?? true,
     })
 
+    console.log('Location created successfully:', location.id)
     return NextResponse.json(location, { status: 201 })
   } catch (error: any) {
     console.error('Error in POST /api/locations:', error)
+    console.error('Error stack:', error?.stack)
     return NextResponse.json(
-      { error: 'Failed to create location', details: error?.message || error },
+      { 
+        error: 'Failed to create location', 
+        details: error?.message || String(error),
+        code: error?.code,
+        meta: error?.meta
+      },
       { status: 500 }
     )
   }
