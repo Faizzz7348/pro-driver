@@ -31,7 +31,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { title, position, active } = body
+    const { title, position } = body
 
     if (!title) {
       return NextResponse.json(
@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
     const row = await createGalleryRow({
       title,
       position,
-      active,
     })
 
     return NextResponse.json(row, { status: 201 })
